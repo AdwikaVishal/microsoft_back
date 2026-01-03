@@ -12,6 +12,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.collectAsState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -37,13 +38,28 @@ fun OnboardingScreen(
     onOnboardingComplete: () -> Unit,
     accessibilityManager: AccessibilityManager? = null
 ) {
-    var selectedAbilityType by remember { mutableStateOf(AbilityType.NORMAL) }
+    var selectedAbilityType by remember { mutableStateOf(AbilityType.NONE) }
     var selectedLanguage by remember { mutableStateOf("English") }
     var currentStep by remember { mutableStateOf(0) }
+    
+    val uiTranslations by viewModel.uiTranslations.collectAsState()
+    
+    // Initial translation or update when language changes
+    LaunchedEffect(selectedLanguage) {
+        viewModel.translateLabels(listOf(
+            "Choose Your Ability Profile",
+            "This helps us customize alerts and guidance for your needs",
+            "Select Your Language",
+            "We'll use this for voice announcements",
+            "Next", "Get Started", "Back", "Skip & Use Defaults",
+            "Setup complete. Welcome to SenseSafe.",
+            "Welcome to SenseSafe. Let's set up your accessibility preferences."
+        ))
+    }
 
     // Speak welcome message when onboarding starts
     LaunchedEffect(Unit) {
-        accessibilityManager?.speak("Welcome to SenseSafe. Let\'s set up your accessibility preferences.")
+        accessibilityManager?.speak(uiTranslations["Welcome to SenseSafe. Let's set up your accessibility preferences."] ?: "Welcome to SenseSafe. Let's set up your accessibility preferences.")
     }
 
     Column(
@@ -99,8 +115,8 @@ fun OnboardingScreen(
         // Title
         Text(
             text = when (currentStep) {
-                0 -> "Choose Your Ability Profile"
-                else -> "Select Your Language"
+                0 -> uiTranslations["Choose Your Ability Profile"] ?: "Choose Your Ability Profile"
+                else -> uiTranslations["Select Your Language"] ?: "Select Your Language"
             },
             style = MaterialTheme.typography.headlineMedium,
             fontWeight = FontWeight.Bold,
@@ -113,8 +129,8 @@ fun OnboardingScreen(
         // Subtitle
         Text(
             text = when (currentStep) {
-                0 -> "This helps us customize alerts and guidance for your needs"
-                else -> "We\'ll use this for voice announcements"
+                0 -> uiTranslations["This helps us customize alerts and guidance for your needs"] ?: "This helps us customize alerts and guidance for your needs"
+                else -> uiTranslations["We'll use this for voice announcements"] ?: "We'll use this for voice announcements"
             },
             style = MaterialTheme.typography.bodyLarge,
             textAlign = TextAlign.Center,
@@ -177,7 +193,7 @@ fun OnboardingScreen(
                 ) {
                     Icon(Icons.Default.ArrowBack, contentDescription = null)
                     Spacer(modifier = Modifier.width(8.dp))
-                    Text("Back")
+                    Text(uiTranslations["Back"] ?: "Back")
                 }
             }
 
@@ -189,7 +205,7 @@ fun OnboardingScreen(
                         accessibilityManager?.speak("Next step")
                     } else {
                         viewModel.saveUserPreferences(selectedAbilityType, selectedLanguage)
-                        accessibilityManager?.speak("Setup complete. Welcome to SenseSafe.")
+                        accessibilityManager?.speak(uiTranslations["Setup complete. Welcome to SenseSafe."] ?: "Setup complete. Welcome to SenseSafe.")
                         onOnboardingComplete()
                     }
                 },
@@ -199,7 +215,7 @@ fun OnboardingScreen(
                 shape = RoundedCornerShape(16.dp)
             ) {
                 Text(
-                    text = if (currentStep < 1) "Next" else "Get Started",
+                    text = if (currentStep < 1) uiTranslations["Next"] ?: "Next" else uiTranslations["Get Started"] ?: "Get Started",
                     fontSize = 16.sp,
                     fontWeight = FontWeight.SemiBold
                 )
@@ -216,11 +232,12 @@ fun OnboardingScreen(
         TextButton(
             onClick = {
                 viewModel.saveUserPreferences(selectedAbilityType, selectedLanguage)
-                accessibilityManager?.speak("Setup complete. Welcome to SenseSafe.")
+                viewModel.saveUserPreferences(selectedAbilityType, selectedLanguage)
+                accessibilityManager?.speak(uiTranslations["Setup complete. Welcome to SenseSafe."] ?: "Setup complete. Welcome to SenseSafe.")
                 onOnboardingComplete()
             }
         ) {
-            Text("Skip & Use Defaults")
+            Text(uiTranslations["Skip & Use Defaults"] ?: "Skip & Use Defaults")
         }
     }
 }
@@ -345,24 +362,26 @@ fun LanguageCard(
 
 private fun getAbilityIcon(abilityType: AbilityType): ImageVector {
     return when (abilityType) {
-        AbilityType.NORMAL -> Icons.Default.Person
+        AbilityType.NONE -> Icons.Default.Person
         AbilityType.BLIND -> Icons.Default.VisibilityOff
         AbilityType.LOW_VISION -> Icons.Default.RemoveRedEye
         AbilityType.DEAF -> Icons.Default.VolumeOff
         AbilityType.HARD_OF_HEARING -> Icons.Default.VolumeUp
         AbilityType.NON_VERBAL -> Icons.Default.MicOff
         AbilityType.ELDERLY -> Icons.Default.AccessibleForward
+        AbilityType.OTHER -> Icons.Default.MoreHoriz
     }
 }
 
 private fun getAbilityDescription(abilityType: AbilityType): String {
     return when (abilityType) {
-        AbilityType.NORMAL -> "Standard accessibility settings"
+        AbilityType.NONE -> "Standard accessibility settings"
         AbilityType.BLIND -> "Enhanced audio and haptic feedback"
         AbilityType.LOW_VISION -> "Larger text and high contrast"
         AbilityType.DEAF -> "Visual and vibration alerts"
         AbilityType.HARD_OF_HEARING -> "Amplified audio and visual cues"
         AbilityType.NON_VERBAL -> "Simplified buttons and gestures"
         AbilityType.ELDERLY -> "Larger text and clearer interface"
+        AbilityType.OTHER -> "Custom accessibility settings"
     }
 }

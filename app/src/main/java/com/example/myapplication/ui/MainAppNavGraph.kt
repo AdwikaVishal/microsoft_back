@@ -1,6 +1,7 @@
 package com.example.myapplication.ui
 
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.ViewModelProvider
@@ -54,7 +55,17 @@ fun MainAppNavGraph(
         // ============================================================
         // MAIN SCREEN (Home)
         // ============================================================
-        composable("main") {
+        composable("main") { backStackEntry ->
+            // ✅ FIX: Retrieve scan result from savedStateHandle
+            val scanResult = backStackEntry.savedStateHandle.get<String>("scanResult")
+            
+            // Clear the result after reading
+            LaunchedEffect(scanResult) {
+                if (scanResult != null) {
+                    backStackEntry.savedStateHandle.remove<String>("scanResult")
+                }
+            }
+            
             MainScreen(
                 sosViewModel = sosViewModel,
                 alertViewModel = alertViewModel,
@@ -62,7 +73,18 @@ fun MainAppNavGraph(
                 onNavigateToCamera = { navController.navigate("camera") },
                 onNavigateToVoiceCommand = { navController.navigate("voiceCommand") },
                 onNavigateToReportIncident = { navController.navigate("reportIncident") },
-                accessibilityManager = accessibilityManager
+                onNavigateToTrackLocation = { navController.navigate("trackLocation") },
+                accessibilityManager = accessibilityManager,
+                initialScanResult = scanResult
+            )
+        }
+        
+        // ============================================================
+        // TRACK LOCATION SCREEN
+        // ============================================================
+        composable("trackLocation") {
+            com.example.myapplication.ui.screens.TrackLocationScreen(
+                onNavigateBack = { navController.popBackStack() }
             )
         }
 
@@ -169,7 +191,7 @@ fun MainAppNavGraph(
                     title = "Active Alert",
                     message = "There is an active alert in your area. Please stay safe."
                 ),
-                userAbilityType = AbilityType.NORMAL
+                userAbilityType = AbilityType.NONE
             )
         }
 

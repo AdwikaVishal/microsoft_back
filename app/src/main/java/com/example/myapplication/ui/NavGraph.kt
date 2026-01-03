@@ -2,6 +2,7 @@ package com.example.myapplication.ui
 
 import android.content.Intent
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -47,7 +48,17 @@ fun NavGraph(
                 }
             )
         }
-        composable("main") { 
+        composable("main") { backStackEntry ->
+            // ✅ FIX: Retrieve scan result from savedStateHandle
+            val scanResult = backStackEntry.savedStateHandle.get<String>("scanResult")
+            
+            // Clear the result after reading
+            LaunchedEffect(scanResult) {
+                if (scanResult != null) {
+                    backStackEntry.savedStateHandle.remove<String>("scanResult")
+                }
+            }
+            
             MainScreen(
                 sosViewModel = sosViewModel,
                 alertViewModel = alertViewModel,
@@ -55,10 +66,12 @@ fun NavGraph(
                 onNavigateToCamera = { navController.navigate("camera") },
                 onNavigateToVoiceCommand = { navController.navigate("voiceCommand") },
                 onNavigateToReportIncident = { navController.navigate("report_incident") },
-                accessibilityManager = accessibilityManager
+                onNavigateToTrackLocation = { navController.navigate("trackLocation") },
+                accessibilityManager = accessibilityManager,
+                initialScanResult = scanResult
             ) 
         }
-        composable("alert") { AlertScreen(Alert("", ""), AbilityType.NORMAL) }
+        composable("alert") { AlertScreen(Alert("", ""), AbilityType.NONE) }
         composable("guidance") { GuidanceScreen() }
         composable("sos") { SOSScreen() }
         composable("status") { StatusScreen() }
@@ -74,6 +87,11 @@ fun NavGraph(
                 viewModel = incidentViewModel,
                 onNavigateBack = { navController.popBackStack() }
             ) 
+        }
+        composable("trackLocation") {
+            com.example.myapplication.ui.screens.TrackLocationScreen(
+                onNavigateBack = { navController.popBackStack() }
+            )
         }
         composable(
             route = "camera?profile={profile}",

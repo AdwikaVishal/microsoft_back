@@ -38,7 +38,7 @@ fun OnboardingScreen(
     onOnboardingComplete: () -> Unit,
     accessibilityManager: AccessibilityManager? = null
 ) {
-    var selectedAbilityType by remember { mutableStateOf(AbilityType.NORMAL) }
+    var selectedAbilityType by remember { mutableStateOf(AbilityType.NONE) }
     var selectedLanguage by remember { mutableStateOf("English") }
     var currentStep by remember { mutableStateOf(0) }
     
@@ -362,24 +362,26 @@ fun LanguageCard(
 
 private fun getAbilityIcon(abilityType: AbilityType): ImageVector {
     return when (abilityType) {
-        AbilityType.NORMAL -> Icons.Default.Person
+        AbilityType.NONE -> Icons.Default.Person
         AbilityType.BLIND -> Icons.Default.VisibilityOff
         AbilityType.LOW_VISION -> Icons.Default.RemoveRedEye
         AbilityType.DEAF -> Icons.Default.VolumeOff
         AbilityType.HARD_OF_HEARING -> Icons.Default.VolumeUp
         AbilityType.NON_VERBAL -> Icons.Default.MicOff
         AbilityType.ELDERLY -> Icons.Default.AccessibleForward
+        AbilityType.OTHER -> Icons.Default.MoreHoriz
     }
 }
 
 private fun getAbilityDescription(abilityType: AbilityType): String {
     return when (abilityType) {
-        AbilityType.NORMAL -> "Standard accessibility settings"
+        AbilityType.NONE -> "Standard accessibility settings"
         AbilityType.BLIND -> "Enhanced audio and haptic feedback"
         AbilityType.LOW_VISION -> "Larger text and high contrast"
         AbilityType.DEAF -> "Visual and vibration alerts"
         AbilityType.HARD_OF_HEARING -> "Amplified audio and visual cues"
         AbilityType.NON_VERBAL -> "Simplified buttons and gestures"
         AbilityType.ELDERLY -> "Larger text and clearer interface"
+        AbilityType.OTHER -> "Custom accessibility settings"
     }
 }

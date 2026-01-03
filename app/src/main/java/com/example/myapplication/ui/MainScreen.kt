@@ -36,16 +36,29 @@ fun MainScreen(
     onNavigateToCamera: () -> Unit,
     onNavigateToVoiceCommand: () -> Unit,
     onNavigateToReportIncident: () -> Unit,
-    accessibilityManager: AccessibilityManager? = null
+    onNavigateToTrackLocation: () -> Unit,
+    accessibilityManager: AccessibilityManager? = null,
+    initialScanResult: String? = null
 ) {
     val sosState by sosViewModel.sosState.collectAsState()
     var showSosDialog by remember { mutableStateOf(false) }
     var showConfirmationDialog by remember { mutableStateOf(false) }
+    
+    // ✅ FIX: Handle scan result from navigation
+    var scanResult by remember { mutableStateOf(initialScanResult) }
+    var showScanResultDialog by remember { mutableStateOf(initialScanResult != null) }
 
     // Trigger vibration feedback when SOS dialog opens
     LaunchedEffect(showSosDialog) {
         if (showSosDialog) {
             accessibilityManager?.vibrate(AccessibilityManager.PATTERN_CONFIRM)
+        }
+    }
+    
+    // ✅ FIX: Announce scan result when available
+    LaunchedEffect(initialScanResult) {
+        if (initialScanResult != null) {
+            accessibilityManager?.speak(initialScanResult)
         }
     }
 
@@ -231,7 +244,8 @@ fun MainScreen(
                 description = "Share your location with responders",
                 onClick = {
                     accessibilityManager?.vibrate(AccessibilityManager.PATTERN_CONFIRM)
-                    accessibilityManager?.speak("Location tracking enabled")
+                    accessibilityManager?.speak("Opening location tracker")
+                    onNavigateToTrackLocation()
                 }
             )
 
@@ -406,6 +420,52 @@ fun MainScreen(
             }
             else -> {}
         }
+    }
+    
+    // ✅ FIX: Scan Result Dialog
+    if (showScanResultDialog && scanResult != null) {
+        AlertDialog(
+            onDismissRequest = { 
+                showScanResultDialog = false
+                scanResult = null
+            },
+            icon = {
+                Icon(
+                    Icons.Default.CheckCircle,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.size(48.dp)
+                )
+            },
+            title = { 
+                Text(
+                    text = "Exit Detection Complete",
+                    fontWeight = FontWeight.Bold
+                ) 
+            },
+            text = { 
+                Text(scanResult ?: "Scan completed successfully") 
+            },
+            confirmButton = {
+                TextButton(onClick = { 
+                    showScanResultDialog = false
+                    scanResult = null
+                    accessibilityManager?.speak("Scan result dismissed")
+                }) {
+                    Text("OK")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { 
+                    showScanResultDialog = false
+                    scanResult = null
+                    onNavigateToCamera() // Scan again
+                    accessibilityManager?.speak("Opening camera to scan again")
+                }) {
+                    Text("Scan Again")
+                }
+            }
+        )
     }
 }
 

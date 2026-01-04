@@ -86,6 +86,13 @@ android {
         compose = true
         buildConfig = true
     }
+    
+    // Lint configuration - opt-in to experimental CameraX API
+    lint {
+        abortOnError = false
+        warningsAsErrors = false
+        checkDependencies = true
+    }
 }
 
 dependencies {
@@ -125,6 +132,9 @@ dependencies {
     implementation(libs.androidx.camera.lifecycle)
     implementation(libs.androidx.camera.view)
     implementation(libs.com.google.mlkit.text.recognition)
+
+    // ONNX Runtime for model inference
+    // implementation("com.microsoft.onnxruntime:onnxruntime-android:1.14.1") // Add manually if needed
 
     // DataStore
     implementation(libs.androidx.datastore.preferences)

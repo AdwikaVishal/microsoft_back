@@ -10,7 +10,7 @@ import java.util.concurrent.TimeUnit
 object RetrofitClient {
     // TODO: Move base URL to Azure once deployed
     // Use 10.0.2.2 for Android Emulator to access localhost
-    private const val BASE_URL = "http://10.211.52.92:8000"
+    private const val BASE_URL = "http://192.168.1.22:8000"
     
     // Demo/test credentials for development
     const val DEMO_EMAIL = "demo@sensesafe.app"

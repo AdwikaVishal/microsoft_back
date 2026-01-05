@@ -32,7 +32,7 @@ class Settings(BaseSettings):
         "http://localhost:3001",  # Admin dashboard
         "http://localhost:3002",  # Actual Vite port
         "http://localhost:5173",  # Vite dev server
-        "http://10.211.52.92:3000",  # User app on network IP
+        "http://192.168.1.22:8000",  # User app on network IP
         "http://10.211.52.92:3001",  # Admin dashboard on network IP
         "http://10.211.52.92:3002",  # Actual Vite port on network IP
         # Note: Removed "*" wildcard because allow_credentials=True 

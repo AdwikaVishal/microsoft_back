@@ -13,7 +13,7 @@ class YoloOnnxDetector(private val context: Context) {
     // private var ortSession: OrtSession? = null
     private val inputWidth = 640
     private val inputHeight = 640
-    private val confidenceThreshold = 0.60f  // Increased from 0.5f to reduce false positives
+    private val confidenceThreshold = 0.7f  // Increased from 0.5f to reduce false positives
     private val nmsThreshold = 0.4f
     
     // Executor for async detection - runs inference in background

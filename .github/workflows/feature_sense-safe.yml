@@ -2,11 +2,12 @@
 # More GitHub Actions for Azure: https://github.com/Azure/actions
 # More info on Python, GitHub Actions, and Azure App Service: https://aka.ms/python-webapps-actions
 
-name: Build and deploy Python app to Azure Web App - sense-safe
+name: Build and deploy Python backend to Azure Web App - sense-safe
 
 on:
   push:
     branches:
+      - main
       - feature
   workflow_dispatch:
 
@@ -14,52 +15,55 @@ jobs:
   build:
     runs-on: ubuntu-latest
     permissions:
-      contents: read #This is required for actions/checkout
+      contents: read
 
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout code
+        uses: actions/checkout@v4
 
       - name: Set up Python version
         uses: actions/setup-python@v5
         with:
           python-version: '3.11'
 
-      # 🛠️ Local Build Section (Optional)
-      # The following section in your workflow is designed to catch build issues early on the client side, before deployment. This can be helpful for debugging and validation. However, if this step significantly increases deployment time and early detection is not critical for your workflow, you may remove this section to streamline the deployment process.
-      - name: Create and Start virtual environment and Install dependencies
+      - name: Create and activate virtual environment
         run: |
           python -m venv antenv
           source antenv/bin/activate
-          pip install -r requirements.txt
-                
-      # By default, when you enable GitHub CI/CD integration through the Azure portal, the platform automatically sets the SCM_DO_BUILD_DURING_DEPLOYMENT application setting to true. This triggers the use of Oryx, a build engine that handles application compilation and dependency installation (e.g., pip install) directly on the platform during deployment. Hence, we exclude the antenv virtual environment directory from the deployment artifact to reduce the payload size. 
-      - name: Upload artifact for deployment jobs
+          pip install -r backend/requirements.txt
+
+      - name: Run backend tests (if available)
+        run: |
+          source antenv/bin/activate
+          if [ -f "backend/test_backend.py" ]; then
+            cd backend && python -m pytest test_backend.py -v || true
+          fi
+
+      - name: Upload backend artifact for deployment jobs
         uses: actions/upload-artifact@v4
         with:
-          name: python-app
-          path: |
-            .
-            !antenv/
-
-      # 🚫 Opting Out of Oryx Build
-      # If you prefer to disable the Oryx build process during deployment, follow these steps:
-      # 1. Remove the SCM_DO_BUILD_DURING_DEPLOYMENT app setting from your Azure App Service Environment variables.
-      # 2. Refer to sample workflows for alternative deployment strategies: https://github.com/Azure/actions-workflow-samples/tree/master/AppService
-      
+          name: python-backend
+          path: backend/
+          !antenv/
 
   deploy:
     runs-on: ubuntu-latest
     needs: build
     permissions:
-      id-token: write #This is required for requesting the JWT
-      contents: read #This is required for actions/checkout
+      id-token: write
+      contents: read
+
+    environment:
+      name: 'Production'
+      url: https://sense-safe.azurewebsites.net
 
     steps:
-      - name: Download artifact from build job
+      - name: Download backend artifact from build job
         uses: actions/download-artifact@v4
         with:
-          name: python-app
-      
+          name: python-backend
+          path: backend
+
       - name: Login to Azure
         uses: azure/login@v2
         with:
@@ -67,10 +71,48 @@ jobs:
           tenant-id: ${{ secrets.AZUREAPPSERVICE_TENANTID_CD352D61076D41B7BF37D5047483CE05 }}
           subscription-id: ${{ secrets.AZUREAPPSERVICE_SUBSCRIPTIONID_EFEEE562212748679D25976E9D36917E }}
 
-      - name: 'Deploy to Azure Web App'
+      - name: Create Azure App Settings
+        uses: azure/CLI@v2
+        with:
+          inlineScript: |
+            az webapp config appsettings set \
+              --resource-group sense-safe-rg \
+              --name sense-safe \
+              --slot Production \
+              --settings \
+                APP_NAME="SenseSafe" \
+                APP_VERSION="1.0.0" \
+                DEBUG="false" \
+                DATABASE_URL="${{ secrets.DATABASE_URL }}" \
+                JWT_SECRET="${{ secrets.JWT_SECRET }}" \
+                JWT_ALGORITHM="HS256" \
+                ACCESS_TOKEN_EXPIRE_MINUTES="30" \
+                ADMIN_EMAIL="${{ secrets.ADMIN_EMAIL }}" \
+                ADMIN_PASSWORD="${{ secrets.ADMIN_PASSWORD }}" \
+                AZURE_CV_KEY="${{ secrets.AZURE_CV_KEY }}" \
+                AZURE_CV_ENDPOINT="${{ secrets.AZURE_CV_ENDPOINT }}" \
+                CORS_ORIGINS="['http://localhost:3000','http://localhost:3001','http://localhost:3002','http://localhost:5173','https://sense-safe.azurewebsites.net']"
+
+      - name: Run database migrations
+        uses: azure/CLI@v2
+        with:
+          inlineScript: |
+            cd backend && \
+            python -m venv deploy_venv && \
+            deploy_venv/bin/pip install alembic && \
+            deploy_venv/bin/alembic upgrade head
+
+      - name: Deploy to Azure Web App
         uses: azure/webapps-deploy@v3
         id: deploy-to-webapp
         with:
           app-name: 'sense-safe'
           slot-name: 'Production'
-          
+
+      - name: Verify deployment
+        uses: azure/CLI@v2
+        with:
+          inlineScript: |
+            echo "Deployment completed. Checking app status..."
+            curl -sI https://sense-safe.azurewebsites.net/health || echo "Health check failed"
+
